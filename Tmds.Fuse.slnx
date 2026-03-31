@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="samples/Mounter/Mounter.csproj" />
+  <Project Path="src/Tmds.Fuse/Tmds.Fuse.csproj" />
+  <Project Path="test/Tmds.Fuse.Tests/Tmds.Fuse.Tests.csproj" />  
+</Solution>
