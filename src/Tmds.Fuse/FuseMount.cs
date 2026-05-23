@@ -103,8 +103,20 @@ namespace Tmds.Fuse
             _init = Init;
         }
 
-        private void Init(IntPtr ptr, IntPtr ptr2)
+        private unsafe void Init(IntPtr ptr, IntPtr ptr2)
         {
+            // pgfs downstream patch: set fuse_config.use_ino = 1 so the kernel honors the
+            // filesystem-provided st_ino (returned by GetAttr) instead of synthesizing its
+            // own. Without this, hard-linked files report different st_ino values, breaking
+            // POSIX semantics. libfuse 3 only exposes use_ino via fuse_config in init (the
+            // legacy `-o use_ino` is no longer accepted via fuse_new args). The struct offset
+            // 64 is the position of the `use_ino` int field in libfuse 3.x (verified against
+            // libfuse 3.14.0; the layout has been stable since 3.0). If a future libfuse
+            // changes this layout, dotnet test or e2e hardlink tests will catch the regression.
+            if (ptr2 != IntPtr.Zero)
+            {
+                *((int*)(ptr2 + 64)) = 1;
+            }
             _mountTaskCompletion.TrySetResult(null);
         }
 
