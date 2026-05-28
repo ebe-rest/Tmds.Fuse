@@ -41,6 +41,11 @@ namespace Tmds.Fuse
         public delegate void fuse_exit_delegate(fuse* f);
         public static readonly fuse_exit_delegate fuse_exit;
 
+        // Added by the pgfs fork so the audit log can read the caller uid/gid/pid. Resolved as
+        // nullable (TryCreateDelegate) so a libfuse lacking the symbol still mounts instead of failing.
+        public delegate fuse_context* fuse_get_context_Delegate();
+        public static readonly fuse_get_context_Delegate fuse_get_context;
+
         static LibFuse()
         {
             s_libFuseHandle = dlopen(LibraryName, 2);
@@ -58,6 +63,22 @@ namespace Tmds.Fuse
             fuse_destroy = CreateDelegate<fuse_destroy_delegate>("fuse_destroy");
             fuse_opt_free_args = CreateDelegate<fuse_opt_free_args_Delegate>("fuse_opt_free_args");
             fuse_exit = CreateDelegate<fuse_exit_delegate>("fuse_exit");
+            fuse_get_context = TryCreateDelegate<fuse_get_context_Delegate>("fuse_get_context", "FUSE_3.0");
+        }
+
+        /// <summary>
+        /// Like CreateDelegate but returns default(T) (= null) instead of throwing when the symbol
+        /// cannot be resolved. Used for the optional fuse_get_context delegate added by the pgfs
+        /// fork, so an unsupporting libfuse still mounts.
+        /// </summary>
+        private static T TryCreateDelegate<T>(string name, string version = "FUSE_3.0")
+        {
+            IntPtr functionPtr = dlvsym(s_libFuseHandle, name, version);
+            if (functionPtr == IntPtr.Zero)
+            {
+                return default;
+            }
+            return Marshal.GetDelegateForFunctionPointer<T>(functionPtr);
         }
 
         private static T CreateDelegate<T>(string name, string version = "FUSE_3.0")

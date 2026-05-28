@@ -23,6 +23,32 @@ namespace Tmds.Fuse
         public static bool CheckDependencies()
             => LibFuse.IsAvailable && HasFusermount;
 
+        /// <summary>
+        /// Returns the caller (uid / gid / pid) of the FUSE operation currently being handled;
+        /// call it from inside a FUSE callback (wraps libfuse's fuse_get_context()). Added by the
+        /// pgfs fork so the audit log can record who performed an operation. Returns false when it
+        /// cannot be obtained (libfuse without the symbol, or called outside a callback).
+        /// </summary>
+        public static unsafe bool TryGetCallerContext(out uint uid, out uint gid, out int pid)
+        {
+            uid = 0;
+            gid = 0;
+            pid = 0;
+            if (LibFuse.fuse_get_context == null)
+            {
+                return false;
+            }
+            fuse_context* ctx = LibFuse.fuse_get_context();
+            if (ctx == null)
+            {
+                return false;
+            }
+            uid = ctx->uid;
+            gid = ctx->gid;
+            pid = ctx->pid;
+            return true;
+        }
+
         public static string InstallationInstructions
         {
             get

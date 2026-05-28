@@ -11,6 +11,19 @@ namespace Tmds.Fuse
     enum fuse_fill_dir_flags { }
     struct fuse_file_info { }
 
+    // libfuse's `struct fuse_context` (holds the caller uid/gid/pid). Mirrors the leading layout of
+    // the pointer returned by fuse_get_context(). uid_t/gid_t are 32-bit unsigned and pid_t is
+    // 32-bit signed. Added by the pgfs fork so the audit log can read the caller uid.
+    unsafe struct fuse_context
+    {
+        public fuse* fuse;
+        public uint uid;
+        public uint gid;
+        public int pid;
+        public void* private_data;
+        public uint umask;
+    }
+
     unsafe struct fuse_args
     {
         /** Argument count */
